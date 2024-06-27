@@ -9,16 +9,17 @@ class POSOrder(models.Model):
         "pos_order_operating_unit_rel",
         string="Operating Units",
     )
-    config_id = fields.Many2one(related="session_id.config_id", readonly=True)
+    config_id = fields.Many2one(related="session_id.config_id")
 
-    @api.model
-    def create(self, vals):
-        session_id = self.env["pos.session"].sudo().browse(vals.get("session_id"))
-        if session_id.config_id:
-            vals["operating_unit_ids"] = [
-                (6, 0, session_id.config_id.operating_unit_ids.ids)
-            ]
-        return super(POSOrder, self).create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            session_id = self.env["pos.session"].browse(vals['session_id'])
+            if session_id.config_id:
+                vals["operating_unit_ids"] = [
+                    (6, 0, session_id.config_id.operating_unit_ids.ids)
+                ]
+        return super().create(vals_list)
 
 
 class POSOrderLine(models.Model):
@@ -37,4 +38,4 @@ class POSOrderLine(models.Model):
             vals["operating_unit_ids"] = [
                 (6, 0, order_id.config_id.operating_unit_ids.ids)
             ]
-        return super(POSOrderLine, self).create(vals)
+        return super().create(vals)

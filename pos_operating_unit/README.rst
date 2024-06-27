@@ -78,6 +78,8 @@ Contributors
 
    -  Ilyas <irazor147@gmail.com>
 
+-  Tran Thanh Trai <traitt@trobz.com>
+
 Maintainers
 -----------
 

@@ -5,11 +5,13 @@ from odoo.tests.common import TransactionCase
 
 class TestModule(TransactionCase):
     def setUp(self):
-        super(TestModule, self).setUp()
+        super().setUp()
         self.ResUsers = self.env["res.users"]
         self.PosOrder = self.env["pos.order"]
         self.pos_product = self.env.ref("point_of_sale.whiteboard_pen")
-        self.pricelist = self.env.ref("product.list0")
+        self.pricelist = self.env["product.pricelist"].create(
+            {"name": "Test pricelist", "currency_id": self.env.ref("base.EUR").id}
+        )
 
         # Create a new pos config and open it
         self.pos_config = self.env.ref("point_of_sale.pos_config_main").copy()
@@ -19,24 +21,25 @@ class TestModule(TransactionCase):
         # group
         self.group_user = self.env.ref("base.group_user")
         self.group_pos_manager = self.env.ref("point_of_sale.group_pos_manager")
+        self.group_invoicing_billing = self.env.ref("account.group_account_invoice")
         # Main Operating Unit
         self.ou1 = self.env.ref("operating_unit.main_operating_unit")
         # B2B Operating Unit
         self.b2b = self.env.ref("operating_unit.b2b_operating_unit")
 
         self.pos_config.operating_unit_ids = [(6, 0, [self.ou1.id])]
-        self.pos_config.open_session_cb()
+        self.pos_config.open_ui()
 
         # Create users
         self.user1_id = self._create_user(
             "user_1",
-            [self.group_user, self.group_pos_manager],
+            [self.group_user, self.group_invoicing_billing, self.group_pos_manager],
             self.company,
             [self.ou1, self.b2b],
         )
         self.user2_id = self._create_user(
             "user_2",
-            [self.group_user, self.group_pos_manager],
+            [self.group_user, self.group_invoicing_billing, self.group_pos_manager],
             self.company,
             [self.b2b],
         )
@@ -77,6 +80,7 @@ class TestModule(TransactionCase):
                 "partner_id": False,
                 "amount_paid": 1000,
                 "pos_session_id": self.pos_config.current_session_id.id,
+                "date_order": fields.Datetime.to_string(fields.Datetime.now()),
                 "lines": [
                     [
                         0,
@@ -86,6 +90,7 @@ class TestModule(TransactionCase):
                             "qty": 1,
                             "price_subtotal": 1000,
                             "price_subtotal_incl": 1000,
+                            "price_unit": 500.0,
                         },
                     ]
                 ],
@@ -121,7 +126,7 @@ class TestModule(TransactionCase):
     def _create_user(self, login, groups, company, operating_units):
         """Create a user."""
         group_ids = [group.id for group in groups]
-        user = self.ResUsers.with_context({"no_reset_password": True}).create(
+        user = self.ResUsers.with_context(**{"no_reset_password": True}).create(
             {
                 "name": "Chicago Purchase User",
                 "login": login,
